@@ -2,33 +2,61 @@ $(document).ready(function() {
     $('#register-form').submit(function(e) {
         e.preventDefault();
 
-        name = $('#name').val();
-        email = $('#email').val();
-        password = $('#password').val();
-        phone_number = $('#phone_number').val();
-        role = $('input[name="role"]:checked').val();
+        let name = $('#name').val().trim();
+        let email = $('#email').val().trim();
+        let password = $('#password').val();
+        let phone_number = $('#phone_number').val().trim();
+        let role = $('input[name="role"]:checked').val();
 
-        if (name == '' || email == '' || password == '' || phone_number == '') {
+        // Regex patterns
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const phoneRegex = /^[0-9]{7,15}$/;
+
+        // Empty fields check
+        if (name === '' || email === '' || password === '' || phone_number === '') {
             Swal.fire({
                 icon: 'error',
                 title: 'Oops...',
                 text: 'Please fill in all fields!',
             });
-
-            return;
-        } else if (password.length < 6 || !password.match(/[a-z]/) || !password.match(/[A-Z]/) || !password.match(/[0-9]/)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Oops...',
-                text: 'Password must be at least 6 characters long and contain at least one lowercase letter, one uppercase letter, and one number!',
-            });
-
             return;
         }
 
+        // Email format check
+        if (!emailRegex.test(email)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Please enter a valid email address!',
+            });
+            return;
+        }
+
+        // Phone number validation
+        if (!phoneRegex.test(phone_number)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Phone number must be 7–15 digits long!',
+            });
+            return;
+        }
+
+        // Password strength check
+        if (password.length < 6 || !password.match(/[a-z]/) || !password.match(/[A-Z]/) || !password.match(/[0-9]/)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Password must be at least 6 characters and contain lowercase, uppercase, and a number!',
+            });
+            return;
+        }
+
+        // Send AJAX request
         $.ajax({
-            url: '../actions/register_user_action.php',
+            url: '../actions/register_user_action.php', 
             type: 'POST',
+            dataType: 'json',
             data: {
                 name: name,
                 email: email,
