@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once '../controllers/user_controller.php'; // adjust if needed
+require_once '../controllers/user_controller.php'; 
 
 $message = "";
 
@@ -165,3 +165,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>
+
