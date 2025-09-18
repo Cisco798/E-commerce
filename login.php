@@ -1,3 +1,36 @@
+<?php
+session_start();
+require_once '../controllers/user_controller.php'; // adjust if needed
+
+$message = "";
+
+// Handle login form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if (!empty($email) && !empty($password)) {
+        // Call controller login function
+        $user = login_user_ctr($email); // should return user record with hashed password
+
+        if ($user && password_verify($password, $user['password'])) {
+            // Set session variables
+            $_SESSION['user_id'] = $user['user_id'];
+            $_SESSION['name'] = $user['name'];
+            $_SESSION['role'] = $user['role'];
+
+            // 👉 REDIRECTION HAPPENS HERE
+            header("Location: index.php");  // 🔑 sends user to homepage
+            exit(); // 🔑 stops execution after redirect
+        } else {
+            $message = "Invalid email or password!";
+        }
+    } else {
+        $message = "Please enter both email and password.";
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -30,10 +63,7 @@
         }
 
         body {
-            /* Base background color */
             background-color: #f8f9fa;
-
-            /* Gradient-like grid using repeating-linear-gradients */
             background-image:
                 repeating-linear-gradient(0deg,
                     #b77a7a,
@@ -47,14 +77,8 @@
                     transparent 20px),
                 linear-gradient(rgba(183, 122, 122, 0.1),
                     rgba(183, 122, 122, 0.1));
-
-            /* Blend the gradients for a subtle overlay effect */
             background-blend-mode: overlay;
-
-            /* Define the size of the grid */
             background-size: 20px 20px;
-
-            /* Ensure the background covers the entire viewport */
             min-height: 100vh;
             margin: 0;
             padding: 0;
@@ -82,20 +106,11 @@
         }
 
         @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.05);
-            }
-
-            100% {
-                transform: scale(1);
-            }
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
-        /* Additional Styling for Enhanced Appearance */
         .form-label i {
             margin-left: 5px;
             color: #b77a7a;
@@ -106,13 +121,8 @@
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
 </head>
@@ -126,12 +136,11 @@
                         <h4>Login</h4>
                     </div>
                     <div class="card-body">
-                        <!-- Alert Messages (To be handled by backend) -->
-                        <!-- Example:
-                        <div class="alert alert-info text-center">Login successful!</div>
-                        -->
+                        <?php if (!empty($message)): ?>
+                            <div class="alert alert-danger text-center"><?= htmlspecialchars($message) ?></div>
+                        <?php endif; ?>
 
-                        <form method="POST" action="" class="mt-4" id="login-form">
+                        <form method="POST" class="mt-4" id="login-form">
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email <i class="fa fa-envelope"></i></label>
                                 <input type="email" class="form-control animate__animated animate__fadeInUp" id="email" name="email" required>
@@ -154,9 +163,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="../js/login.js"></script>
-
-    
 </body>
-
 </html>
