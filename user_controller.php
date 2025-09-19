@@ -23,11 +23,11 @@ function login_user_ctr($email, $password)
 {
     $user = new User();
     
-    // Get user by email
-    $user_data = $user->getUserByEmail($email);
+    // Use the new method that includes password verification
+    $user_data = $user->getCustomerByEmailAndPassword($email, $password);
     
-    if ($user_data && password_verify($password, $user_data['password'])) {
-        // Return user data if login successful
+    if ($user_data) {
+        // Return user data if authentication successful
         return $user_data;
     }
     
