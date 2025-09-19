@@ -64,4 +64,36 @@ class User extends db_connection
         return $stmt->get_result()->fetch_assoc();
     }
 
+    /**
+     * Get customer by email and verify password
+     * @param string $email Customer email address
+     * @param string $password Plain text password to verify
+     * @return array|false Returns customer data if authentication successful, false otherwise
+     */
+    public function getCustomerByEmailAndPassword($email, $password)
+    {
+        // Get customer by email
+        $stmt = $this->db->prepare("SELECT customer_id, customer_name, customer_email, customer_pass, customer_contact, user_role, date_created FROM customer WHERE customer_email = ?");
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        
+        // Check if customer exists and password matches
+        if ($result && password_verify($password, $result['customer_pass'])) {
+            // Return customer data with consistent field names for session
+            return array(
+                'user_id' => $result['customer_id'],
+                'name' => $result['customer_name'],
+                'email' => $result['customer_email'],
+                'phone_number' => $result['customer_contact'],
+                'role' => $result['user_role'],
+                'date_created' => $result['date_created'] ?? null,
+                'password' => $result['customer_pass'] // Keep for compatibility
+            );
+        }
+        
+        // Return false if customer not found or password doesn't match
+        return false;
+    }
+
 }
