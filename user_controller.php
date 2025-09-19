@@ -18,3 +18,19 @@ function get_user_by_email_ctr($email)
     $user = new User();
     return $user->getUserByEmail($email);
 }
+
+function login_user_ctr($email, $password)
+{
+    $user = new User();
+    
+    // Get user by email
+    $user_data = $user->getUserByEmail($email);
+    
+    if ($user_data && password_verify($password, $user_data['password'])) {
+        // Return user data if login successful
+        return $user_data;
+    }
+    
+    // Return false if login failed
+    return false;
+}
