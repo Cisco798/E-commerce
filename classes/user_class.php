@@ -14,6 +14,8 @@ class User extends db_connection
     private $role;
     private $date_created;
     private $phone_number;
+    private $country;
+    private $city;
 
     public function __construct($user_id = null)
     {
@@ -42,18 +44,29 @@ class User extends db_connection
             $this->role = $result['user_role'];
             $this->date_created = isset($result['date_created']) ? $result['date_created'] : null;
             $this->phone_number = $result['customer_contact'];
+            $this->country = isset($result['customer_country']) ? $result['customer_country'] : null;
+            $this->city = isset($result['customer_city']) ? $result['customer_city'] : null;
         }
     }
 
-    public function createUser($name, $email, $password, $phone_number, $role)
+    public function createUser($full_name, $email, $hashed_password, $contact_number, $country, $city, $user_role)
     {
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $this->db->prepare("INSERT INTO customer (customer_name, customer_email, customer_pass, customer_contact, user_role) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssi", $name, $email, $hashed_password, $phone_number, $role);
+        // Password is already hashed from the action file, so use it directly
+        $stmt = $this->db->prepare("INSERT INTO customer (customer_name, customer_email, customer_pass, customer_contact, customer_country, customer_city, user_role) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        
+        // Ensure user_role is an integer
+        $user_role = (int)$user_role;
+        
+        $stmt->bind_param("ssssssi", $full_name, $email, $hashed_password, $contact_number, $country, $city, $user_role);
+        
         if ($stmt->execute()) {
-            return $this->db->insert_id;
+            $insert_id = $this->db->insert_id;
+            error_log("User created successfully with ID: " . $insert_id);
+            return $insert_id;
+        } else {
+            error_log("Database error in createUser: " . $stmt->error);
+            return false;
         }
-        return false;
     }
 
     public function getUserByEmail($email)
@@ -73,7 +86,7 @@ class User extends db_connection
     public function getCustomerByEmailAndPassword($email, $password)
     {
         // Get customer by email
-        $stmt = $this->db->prepare("SELECT customer_id, customer_name, customer_email, customer_pass, customer_contact, user_role, date_created FROM customer WHERE customer_email = ?");
+        $stmt = $this->db->prepare("SELECT customer_id, customer_name, customer_email, customer_pass, customer_contact, customer_country, customer_city, user_role, date_created FROM customer WHERE customer_email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
@@ -86,6 +99,8 @@ class User extends db_connection
                 'name' => $result['customer_name'],
                 'email' => $result['customer_email'],
                 'phone_number' => $result['customer_contact'],
+                'country' => $result['customer_country'] ?? null,
+                'city' => $result['customer_city'] ?? null,
                 'role' => $result['user_role'],
                 'date_created' => $result['date_created'] ?? null,
                 'password' => $result['customer_pass'] // Keep for compatibility

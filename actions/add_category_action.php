@@ -12,11 +12,22 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Check if user is admin
-$user_role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? null;
-if ($user_role != 1 && strtolower($user_role) !== 'admin') {
+// Check if user is admin (check multiple possible session keys)
+$user_role = null;
+if (isset($_SESSION['role'])) {
+    $user_role = $_SESSION['role'];
+} elseif (isset($_SESSION['user_role'])) {
+    $user_role = $_SESSION['user_role'];
+}
+
+// Debug: Log what role we have
+error_log("User Role Check: " . var_export($user_role, true));
+
+// Check if user is admin (role = 1 or 'admin')
+if ($user_role != 1 && $user_role != '1' && strtolower($user_role) !== 'admin') {
     $response['status'] = 'error';
     $response['message'] = 'Access denied. Admin privileges required';
+    $response['debug_role'] = $user_role; // For debugging
     echo json_encode($response);
     exit();
 }
@@ -35,7 +46,7 @@ try {
     $user_id = $_SESSION['user_id'];
     
     // Receive data from the category creation form
-    $category_name = trim($_POST['category_name'] ?? '');
+    $category_name = isset($_POST['category_name']) ? trim($_POST['category_name']) : '';
 
     // Basic validation - check if category name is empty
     if (empty($category_name)) {
@@ -68,29 +79,44 @@ try {
         exit();
     }
 
-    // Validate category data using controller validation function
-    $validation_errors = validate_category_data($category_name, $user_id);
-    if (!empty($validation_errors)) {
+    // Check if validate_category_data function exists before calling it
+    if (function_exists('validate_category_data')) {
+        // Validate category data using controller validation function
+        $validation_errors = validate_category_data($category_name, $user_id);
+        if (!empty($validation_errors)) {
+            $response['status'] = 'error';
+            $response['message'] = implode(', ', $validation_errors);
+            $response['validation_errors'] = $validation_errors;
+            echo json_encode($response);
+            exit();
+        }
+    } else {
+        error_log("Warning: validate_category_data function not found in category_controller.php");
+    }
+
+    // Check if add_category_ctr function exists
+    if (!function_exists('add_category_ctr')) {
         $response['status'] = 'error';
-        $response['message'] = implode(', ', $validation_errors);
-        $response['validation_errors'] = $validation_errors;
+        $response['message'] = 'Category controller function not found';
+        error_log("Error: add_category_ctr function not found in category_controller.php");
         echo json_encode($response);
         exit();
     }
 
     // Invoke the relevant controller function to add the category
-    $result = add_category_ctr($user_id, $category_name);
+    $result = add_category_ctr($category_name, $user_id);
 
     // Return message to the caller
     if ($result) {
         $response['status'] = 'success';
         $response['message'] = 'Category added successfully';
         $response['category_name'] = htmlspecialchars($category_name, ENT_QUOTES, 'UTF-8');
+        $response['category_id'] = $result; // Return the new category ID if available
         $response['user_id'] = $user_id;
         $response['created_at'] = date('Y-m-d H:i:s');
         
         // Log successful addition
-        error_log("Category added successfully: User={$user_id}, Name='{$category_name}'");
+        error_log("Category added successfully: User={$user_id}, Name='{$category_name}', ID={$result}");
         
     } else {
         $response['status'] = 'error';
@@ -102,14 +128,15 @@ try {
 
 } catch (Exception $e) {
     error_log("Add Category Action Error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
     $response['status'] = 'error';
     $response['message'] = 'An unexpected error occurred while adding the category. Please try again later.';
     
-    // In development, you might want to include the actual error
-    if (defined('DEBUG') && DEBUG === true) {
-        $response['debug_error'] = $e->getMessage();
-        $response['debug_trace'] = $e->getTraceAsString();
-    }
+    // Include error details for debugging (comment out in production)
+    $response['debug_error'] = $e->getMessage();
+    $response['debug_file'] = $e->getFile();
+    $response['debug_line'] = $e->getLine();
 }
 
 echo json_encode($response);
